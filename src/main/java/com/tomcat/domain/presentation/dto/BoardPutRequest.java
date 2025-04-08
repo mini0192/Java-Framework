@@ -5,8 +5,7 @@ import lombok.Setter;
 
 @Setter
 @Getter
-public class BoardSaveRequest {
+public class BoardPutRequest {
     private String title;
-    private String writer;
     private String content;
 }

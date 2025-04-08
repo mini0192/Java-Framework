@@ -1,22 +1,25 @@
 package com.tomcat.framework.core;
 
+import com.tomcat.framework.annotation.method.DeleteMapping;
 import com.tomcat.framework.annotation.method.GetMapping;
+import com.tomcat.framework.annotation.method.PutMapping;
 import com.tomcat.framework.annotation.method.PostMapping;
 import com.tomcat.framework.annotation.type.RequestMapping;
 
-import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
 public class DispatcherServlet extends HttpServlet {
+
     private final Map<String, HandlerMethod> getMappings = new HashMap<>();
     private final Map<String, HandlerMethod> postMappings = new HashMap<>();
+    private final Map<String, HandlerMethod> putMappings = new HashMap<>();
+    private final Map<String, HandlerMethod> deleteMappings = new HashMap<>();
 
     public DispatcherServlet(Set<Class<?>> controller) throws Exception {
         for(Class<?> controllerClass : controller) {
@@ -39,26 +42,31 @@ public class DispatcherServlet extends HttpServlet {
                     postMappings.put(mappingPath + path, new HandlerMethod(instance, method));
                     continue;
                 }
+
+                if(method.isAnnotationPresent(PutMapping.class)) {
+                    String path = method.getAnnotation(PutMapping.class).value();
+                    putMappings.put(mappingPath + path, new HandlerMethod(instance, method));
+                    continue;
+                }
+
+                if(method.isAnnotationPresent(DeleteMapping.class)) {
+                    String path = method.getAnnotation(DeleteMapping.class).value();
+                    deleteMappings.put(mappingPath + path, new HandlerMethod(instance, method));
+                    continue;
+                }
             }
         }
     }
 
-    @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
-        String uri = req.getRequestURI();
-        System.out.println("[DispatcherServlet] GET 요청: " + uri);
-
-        Map<String, String> pathVariables = new HashMap<>();
-        HandlerMethod handlerMethod = findHandlerMethod(uri, getMappings, pathVariables);
+    private void doInvoke(HandlerMethod handlerMethod, Map<String, String> pathVariables, HttpServletRequest req, HttpServletResponse res) throws Exception {
         if (handlerMethod == null) {
             if (!res.isCommitted()) {
                 res.sendError(HttpServletResponse.SC_NOT_FOUND);
             }
             return;
         }
-
         try {
-            String view = handlerMethod.getInvoke(req, pathVariables);
+            String view = handlerMethod.invoke(req, pathVariables);
             if (view.startsWith("redirect:")) {
                 String redirectUrl = view.substring("redirect:".length());
                 res.sendRedirect(redirectUrl);
@@ -72,36 +80,59 @@ public class DispatcherServlet extends HttpServlet {
             }
         }
     }
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse res) {
+        String uri = req.getRequestURI();
+        System.out.println("[DispatcherServlet] GET 요청: " + uri);
 
-
+        Map<String, String> pathVariables = new HashMap<>();
+        HandlerMethod handlerMethod = findHandlerMethod(uri, getMappings, pathVariables);
+        try {
+            doInvoke(handlerMethod, pathVariables, req, res);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
+    protected void doPost(HttpServletRequest req, HttpServletResponse res) {
         String uri = req.getRequestURI();
         System.out.println("[DispatcherServlet] POST 요청: " + uri);
 
         Map<String, String> pathVariables = new HashMap<>();
         HandlerMethod handlerMethod = findHandlerMethod(uri, postMappings, pathVariables);
-        if(handlerMethod == null) {
-            if (!res.isCommitted()) {
-                res.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
-            }
-            return;
-        }
-
         try {
-            String view = handlerMethod.postInvoke(req, pathVariables);
-            if (view.startsWith("redirect:")) {
-                String redirectUrl = view.substring("redirect:".length());
-                res.sendRedirect(redirectUrl);
-            } else {
-                req.getRequestDispatcher("/" + view + ".jsp").forward(req, res);
-            }
+            doInvoke(handlerMethod, pathVariables, req, res);
         } catch (Exception e) {
-            e.printStackTrace();
-            if (!res.isCommitted()) {
-                res.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "POST 처리 오류");
-            }
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    protected void doPut(HttpServletRequest req, HttpServletResponse res) {
+        String uri = req.getRequestURI();
+        System.out.println("[DispatcherServlet] PUT 요청: " + uri);
+
+        Map<String, String> pathVariables = new HashMap<>();
+        HandlerMethod handlerMethod = findHandlerMethod(uri, putMappings, pathVariables);
+        try {
+            doInvoke(handlerMethod, pathVariables, req, res);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    protected void doDelete(HttpServletRequest req, HttpServletResponse res) {
+        String uri = req.getRequestURI();
+        System.out.println("[DispatcherServlet] DELETE 요청: " + uri);
+
+        Map<String, String> pathVariables = new HashMap<>();
+        HandlerMethod handlerMethod = findHandlerMethod(uri, deleteMappings, pathVariables);
+        try {
+            doInvoke(handlerMethod, pathVariables, req, res);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 

@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class BoardFindByIdResponse {
-    String title;
-    String writer;
-    String content;
+    private String title;
+    private String writer;
+    private String content;
 }

@@ -2,8 +2,11 @@ package com.tomcat.domain.presentation;
 
 import com.tomcat.domain.presentation.dto.BoardFindAllResponse;
 import com.tomcat.domain.presentation.dto.BoardFindByIdResponse;
+import com.tomcat.domain.presentation.dto.BoardPutRequest;
 import com.tomcat.domain.presentation.dto.BoardSaveRequest;
 import com.tomcat.framework.Model;
+import com.tomcat.framework.annotation.method.DeleteMapping;
+import com.tomcat.framework.annotation.method.PutMapping;
 import com.tomcat.framework.annotation.param.ModelAttribute;
 import com.tomcat.framework.annotation.param.PathVariable;
 import com.tomcat.framework.annotation.type.Controller;
@@ -54,6 +57,16 @@ public class BoardController {
                 .build();
         model.append("post", dto);
         return "detail";
+    }
+
+    @PutMapping("/{id}")
+    public String put(@PathVariable("id") int id, @ModelAttribute BoardSaveRequest dto) {
+        return "redirect:/app/board/" + id;
+    }
+
+    @DeleteMapping("/{id}")
+    public String delete(@PathVariable("id") int id) {
+        return "redirect:/app/board/" + id;
     }
 
     @PostMapping

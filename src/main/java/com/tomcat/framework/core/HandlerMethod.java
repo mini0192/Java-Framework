@@ -19,7 +19,7 @@ public class HandlerMethod {
         this.method = method;
     }
 
-    public String getInvoke(HttpServletRequest req, Map<String, String> pathVariables) throws Exception {
+    public String invoke(HttpServletRequest req, Map<String, String> pathVariables) throws Exception {
         Parameter[] parameters = method.getParameters();
         Object[] args = new Object[parameters.length];
 
@@ -37,37 +37,6 @@ public class HandlerMethod {
                 continue;
             }
 
-            if(!pathVariables.isEmpty()) {
-                if (parameter.isAnnotationPresent(PathVariable.class)) {
-                    PathVariable pathVariable = parameter.getAnnotation(PathVariable.class);
-                    String pathVariableName = pathVariable.value();
-
-                    if(!pathVariables.containsKey(pathVariableName)) {
-                        throw new IllegalArgumentException("Path variable not found: " + pathVariableName);
-                    }
-
-                    args[i] = convert(pathVariables.get(pathVariableName), parameter.getType());
-                    continue;
-                }
-            }
-        }
-
-        String view = (String) method.invoke(controllerInstance, args);
-
-        for (Map.Entry<String, Object> entry : model.getModel().entrySet()) {
-            req.setAttribute(entry.getKey(), entry.getValue());
-        }
-
-        return view;
-    }
-
-    public String postInvoke(HttpServletRequest req, Map<String, String> pathVariables) throws Exception {
-        Parameter[] parameters = method.getParameters();
-        Object[] args = new Object[parameters.length];
-
-        for (int i = 0; i < parameters.length; i++) {
-            Parameter parameter = parameters[i];
-
             if (parameter.isAnnotationPresent(ModelAttribute.class)) {
                 Class<?> paramType = parameter.getType();
                 Object dto = paramType.getDeclaredConstructor().newInstance();
@@ -80,12 +49,31 @@ public class HandlerMethod {
                     }
                 }
                 args[i] = dto;
-            } else if (parameter.getType() == HttpServletRequest.class) {
-                args[i] = req;
+                continue;
+            }
+
+            if(!pathVariables.isEmpty()) {
+                if (parameter.isAnnotationPresent(PathVariable.class)) {
+                    PathVariable pathVariable = parameter.getAnnotation(PathVariable.class);
+                    String pathVariableName = pathVariable.value();
+
+                    if(!pathVariables.containsKey(pathVariableName)) {
+                        throw new IllegalArgumentException("Path variable not found: " + pathVariableName);
+                    }
+
+                    args[i] = convert(pathVariables.get(pathVariableName), parameter.getType());
+                }
+                continue;
             }
         }
 
-        return (String) method.invoke(controllerInstance, args);
+        String view = (String) method.invoke(controllerInstance, args);
+
+        for (Map.Entry<String, Object> entry : model.getModel().entrySet()) {
+            req.setAttribute(entry.getKey(), entry.getValue());
+        }
+
+        return view;
     }
 
 
