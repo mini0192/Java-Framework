@@ -7,5 +7,6 @@ import lombok.Setter;
 @Getter
 public class BoardSaveRequest {
     String title;
+    String writer;
     String content;
 }

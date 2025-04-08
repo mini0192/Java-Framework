@@ -46,9 +46,10 @@ public class DispatcherServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
         String uri = req.getRequestURI();
-        System.out.println("[DispatcherServlet] GET 요청 URI: " + uri);
+        System.out.println("[DispatcherServlet] GET 요청: " + uri);
 
-        HandlerMethod handlerMethod = getMappings.get(uri);
+        Map<String, String> pathVariables = new HashMap<>();
+        HandlerMethod handlerMethod = findHandlerMethod(uri, getMappings, pathVariables);
         if (handlerMethod == null) {
             if (!res.isCommitted()) {
                 res.sendError(HttpServletResponse.SC_NOT_FOUND);
@@ -57,8 +58,13 @@ public class DispatcherServlet extends HttpServlet {
         }
 
         try {
-            String view = handlerMethod.getInvoke(req);
-            req.getRequestDispatcher("/" + view + ".jsp").forward(req, res);
+            String view = handlerMethod.getInvoke(req, pathVariables);
+            if (view.startsWith("redirect:")) {
+                String redirectUrl = view.substring("redirect:".length());
+                res.sendRedirect(redirectUrl);
+            } else {
+                req.getRequestDispatcher("/" + view + ".jsp").forward(req, res);
+            }
         } catch (Exception e) {
             e.printStackTrace();
             if (!res.isCommitted()) {
@@ -72,8 +78,10 @@ public class DispatcherServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
         String uri = req.getRequestURI();
-        System.out.println("[DispatcherServlet] POST 요청 URI: " + uri);
-        HandlerMethod handlerMethod = postMappings.get(uri);
+        System.out.println("[DispatcherServlet] POST 요청: " + uri);
+
+        Map<String, String> pathVariables = new HashMap<>();
+        HandlerMethod handlerMethod = findHandlerMethod(uri, postMappings, pathVariables);
         if(handlerMethod == null) {
             if (!res.isCommitted()) {
                 res.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
@@ -82,13 +90,62 @@ public class DispatcherServlet extends HttpServlet {
         }
 
         try {
-            String view = handlerMethod.postInvoke(req);
-            req.getRequestDispatcher("/" + view + ".jsp").forward(req, res);
+            String view = handlerMethod.postInvoke(req, pathVariables);
+            if (view.startsWith("redirect:")) {
+                String redirectUrl = view.substring("redirect:".length());
+                res.sendRedirect(redirectUrl);
+            } else {
+                req.getRequestDispatcher("/" + view + ".jsp").forward(req, res);
+            }
         } catch (Exception e) {
             e.printStackTrace();
             if (!res.isCommitted()) {
                 res.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "POST 처리 오류");
             }
         }
+    }
+
+    private HandlerMethod findHandlerMethod(String uri, Map<String, HandlerMethod> mappings, Map<String, String> pathVariables) {
+        String key = uri;
+        HandlerMethod handlerMethod = mappings.get(key);
+        if(handlerMethod == null) {
+            for (String mapping : mappings.keySet()) {
+                String[] pathParts = mapping.split("/");
+                String[] uriParts = uri.split("/");
+
+                if (pathParts.length != uriParts.length) continue;
+
+                Map<String, String> pathVariablesMethod = new HashMap<>();
+                boolean match = true;
+
+                for (int i = 0; i < pathParts.length; i++) {
+                    if (pathParts[i].startsWith("{") && pathParts[i].endsWith("}")) {
+                        String paramName = pathParts[i].substring(1, pathParts[i].length() - 1);
+                        String paramValue = uriParts[i];
+                        pathVariablesMethod.put(paramName, paramValue);
+                        continue;
+                    }
+
+                    if (!pathParts[i].equals(uriParts[i])) {
+                        match = false;
+                        break;
+                    }
+                }
+
+                if (match) {
+                    key = mapping;
+                    if(!pathVariablesMethod.isEmpty()) {
+                        pathVariables.putAll(pathVariablesMethod);
+                    }
+                    handlerMethod = mappings.get(mapping);
+                }
+            }
+        }
+        if(handlerMethod == null) {
+            System.out.println("[DispatcherServlet] MisMapping: " + key);
+            return null;
+        }
+        System.out.println("[DispatcherServlet] Mapping: " + key);
+        return handlerMethod;
     }
 }

@@ -2,6 +2,7 @@ package com.tomcat.framework.core;
 
 import com.tomcat.framework.Model;
 import com.tomcat.framework.annotation.param.ModelAttribute;
+import com.tomcat.framework.annotation.param.PathVariable;
 
 import javax.servlet.http.HttpServletRequest;
 import java.lang.reflect.Field;
@@ -18,7 +19,7 @@ public class HandlerMethod {
         this.method = method;
     }
 
-    public String getInvoke(HttpServletRequest req) throws Exception {
+    public String getInvoke(HttpServletRequest req, Map<String, String> pathVariables) throws Exception {
         Parameter[] parameters = method.getParameters();
         Object[] args = new Object[parameters.length];
 
@@ -30,9 +31,24 @@ public class HandlerMethod {
                 args[i] = req;
                 continue;
             }
+
             if (parameter.getType() == Model.class) {
                 args[i] = model;
                 continue;
+            }
+
+            if(!pathVariables.isEmpty()) {
+                if (parameter.isAnnotationPresent(PathVariable.class)) {
+                    PathVariable pathVariable = parameter.getAnnotation(PathVariable.class);
+                    String pathVariableName = pathVariable.value();
+
+                    if(!pathVariables.containsKey(pathVariableName)) {
+                        throw new IllegalArgumentException("Path variable not found: " + pathVariableName);
+                    }
+
+                    args[i] = convert(pathVariables.get(pathVariableName), parameter.getType());
+                    continue;
+                }
             }
         }
 
@@ -45,7 +61,7 @@ public class HandlerMethod {
         return view;
     }
 
-    public String postInvoke(HttpServletRequest req) throws Exception {
+    public String postInvoke(HttpServletRequest req, Map<String, String> pathVariables) throws Exception {
         Parameter[] parameters = method.getParameters();
         Object[] args = new Object[parameters.length];
 
@@ -56,7 +72,6 @@ public class HandlerMethod {
                 Class<?> paramType = parameter.getType();
                 Object dto = paramType.getDeclaredConstructor().newInstance();
 
-                // 필드 값 바인딩
                 for (Field field : paramType.getDeclaredFields()) {
                     field.setAccessible(true);
                     String value = req.getParameter(field.getName());

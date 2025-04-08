@@ -9,8 +9,8 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
-public class BoardFindAllResponse {
-    Long id;
+public class BoardFindByIdResponse {
     String title;
     String writer;
+    String content;
 }
