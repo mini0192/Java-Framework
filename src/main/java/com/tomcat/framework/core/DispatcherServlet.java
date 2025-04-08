@@ -76,7 +76,7 @@ public class DispatcherServlet extends HttpServlet {
         } catch (Exception e) {
             e.printStackTrace();
             if (!res.isCommitted()) {
-                res.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "GET 처리 오류");
+                res.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "실행 오류");
             }
         }
     }
