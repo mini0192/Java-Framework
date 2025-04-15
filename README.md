@@ -4,7 +4,7 @@ Spring Boot MVC 구현
 
 <br/>
 
-## 주요 기능
+## 기능
 
 - @Controller, @RequestMapping 어노테이션 지원
 - @GetMapping, @PostMapping, @PutMapping, @DeleteMapping 어노테이션 지원

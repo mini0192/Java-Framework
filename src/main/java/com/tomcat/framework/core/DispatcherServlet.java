@@ -59,7 +59,7 @@ public class DispatcherServlet extends HttpServlet {
     }
 
     private void doInvoke(HandlerMethod handlerMethod, Map<String, String> pathVariables, HttpServletRequest req, HttpServletResponse res) throws Exception {
-        if (handlerMethod == null) {
+        if(handlerMethod == null) {
             if (!res.isCommitted()) {
                 res.sendError(HttpServletResponse.SC_NOT_FOUND);
             }
@@ -73,7 +73,7 @@ public class DispatcherServlet extends HttpServlet {
             } else {
                 req.getRequestDispatcher("/" + view + ".jsp").forward(req, res);
             }
-        } catch (Exception e) {
+        } catch(Exception e) {
             e.printStackTrace();
             if (!res.isCommitted()) {
                 res.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "실행 오류");

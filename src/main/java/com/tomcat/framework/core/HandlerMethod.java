@@ -25,19 +25,19 @@ public class HandlerMethod {
 
         Model model = new Model();
 
-        for (int i = 0; i < parameters.length; i++) {
+        for(int i = 0; i < parameters.length; i++) {
             Parameter parameter = parameters[i];
-            if (parameter.getType() == HttpServletRequest.class) {
+            if(parameter.getType() == HttpServletRequest.class) {
                 args[i] = req;
                 continue;
             }
 
-            if (parameter.getType() == Model.class) {
+            if(parameter.getType() == Model.class) {
                 args[i] = model;
                 continue;
             }
 
-            if (parameter.isAnnotationPresent(ModelAttribute.class)) {
+            if(parameter.isAnnotationPresent(ModelAttribute.class)) {
                 Class<?> paramType = parameter.getType();
                 Object dto = paramType.getDeclaredConstructor().newInstance();
 
