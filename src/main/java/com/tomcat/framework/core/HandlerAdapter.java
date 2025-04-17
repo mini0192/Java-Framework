@@ -10,11 +10,11 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.Map;
 
-public class HandlerMethod {
+public class HandlerAdapter {
     private final Object controllerInstance;
     private final Method method;
 
-    public HandlerMethod(Object controllerInstance, Method method) {
+    public HandlerAdapter(Object controllerInstance, Method method) {
         this.controllerInstance = controllerInstance;
         this.method = method;
     }

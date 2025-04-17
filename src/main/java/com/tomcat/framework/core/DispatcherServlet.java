@@ -16,10 +16,10 @@ import java.util.Set;
 
 public class DispatcherServlet extends HttpServlet {
 
-    private final Map<String, HandlerMethod> getMappings = new HashMap<>();
-    private final Map<String, HandlerMethod> postMappings = new HashMap<>();
-    private final Map<String, HandlerMethod> putMappings = new HashMap<>();
-    private final Map<String, HandlerMethod> deleteMappings = new HashMap<>();
+    private final Map<String, HandlerAdapter> getMappings = new HashMap<>();
+    private final Map<String, HandlerAdapter> postMappings = new HashMap<>();
+    private final Map<String, HandlerAdapter> putMappings = new HashMap<>();
+    private final Map<String, HandlerAdapter> deleteMappings = new HashMap<>();
 
     public DispatcherServlet(Set<Class<?>> controller) throws Exception {
         for(Class<?> controllerClass : controller) {
@@ -33,40 +33,40 @@ public class DispatcherServlet extends HttpServlet {
             for(Method method : controllerClass.getMethods()) {
                 if(method.isAnnotationPresent(GetMapping.class)) {
                     String path = method.getAnnotation(GetMapping.class).value();
-                    getMappings.put(mappingPath + path, new HandlerMethod(instance, method));
+                    getMappings.put(mappingPath + path, new HandlerAdapter(instance, method));
                     continue;
                 }
 
                 if(method.isAnnotationPresent(PostMapping.class)) {
                     String path = method.getAnnotation(PostMapping.class).value();
-                    postMappings.put(mappingPath + path, new HandlerMethod(instance, method));
+                    postMappings.put(mappingPath + path, new HandlerAdapter(instance, method));
                     continue;
                 }
 
                 if(method.isAnnotationPresent(PutMapping.class)) {
                     String path = method.getAnnotation(PutMapping.class).value();
-                    putMappings.put(mappingPath + path, new HandlerMethod(instance, method));
+                    putMappings.put(mappingPath + path, new HandlerAdapter(instance, method));
                     continue;
                 }
 
                 if(method.isAnnotationPresent(DeleteMapping.class)) {
                     String path = method.getAnnotation(DeleteMapping.class).value();
-                    deleteMappings.put(mappingPath + path, new HandlerMethod(instance, method));
+                    deleteMappings.put(mappingPath + path, new HandlerAdapter(instance, method));
                     continue;
                 }
             }
         }
     }
 
-    private void doInvoke(HandlerMethod handlerMethod, Map<String, String> pathVariables, HttpServletRequest req, HttpServletResponse res) throws Exception {
-        if(handlerMethod == null) {
+    private void doInvoke(HandlerAdapter handlerAdapter, Map<String, String> pathVariables, HttpServletRequest req, HttpServletResponse res) throws Exception {
+        if(handlerAdapter == null) {
             if (!res.isCommitted()) {
                 res.sendError(HttpServletResponse.SC_NOT_FOUND);
             }
             return;
         }
         try {
-            String view = handlerMethod.invoke(req, pathVariables);
+            String view = handlerAdapter.invoke(req, pathVariables);
             if (view.startsWith("redirect:")) {
                 String redirectUrl = view.substring("redirect:".length());
                 res.sendRedirect(redirectUrl);
@@ -86,9 +86,9 @@ public class DispatcherServlet extends HttpServlet {
         System.out.println("[DispatcherServlet] GET 요청: " + uri);
 
         Map<String, String> pathVariables = new HashMap<>();
-        HandlerMethod handlerMethod = findHandlerMethod(uri, getMappings, pathVariables);
+        HandlerAdapter handlerAdapter = findHandlerMethod(uri, getMappings, pathVariables);
         try {
-            doInvoke(handlerMethod, pathVariables, req, res);
+            doInvoke(handlerAdapter, pathVariables, req, res);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -100,9 +100,9 @@ public class DispatcherServlet extends HttpServlet {
         System.out.println("[DispatcherServlet] POST 요청: " + uri);
 
         Map<String, String> pathVariables = new HashMap<>();
-        HandlerMethod handlerMethod = findHandlerMethod(uri, postMappings, pathVariables);
+        HandlerAdapter handlerAdapter = findHandlerMethod(uri, postMappings, pathVariables);
         try {
-            doInvoke(handlerMethod, pathVariables, req, res);
+            doInvoke(handlerAdapter, pathVariables, req, res);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -114,9 +114,9 @@ public class DispatcherServlet extends HttpServlet {
         System.out.println("[DispatcherServlet] PUT 요청: " + uri);
 
         Map<String, String> pathVariables = new HashMap<>();
-        HandlerMethod handlerMethod = findHandlerMethod(uri, putMappings, pathVariables);
+        HandlerAdapter handlerAdapter = findHandlerMethod(uri, putMappings, pathVariables);
         try {
-            doInvoke(handlerMethod, pathVariables, req, res);
+            doInvoke(handlerAdapter, pathVariables, req, res);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -128,18 +128,18 @@ public class DispatcherServlet extends HttpServlet {
         System.out.println("[DispatcherServlet] DELETE 요청: " + uri);
 
         Map<String, String> pathVariables = new HashMap<>();
-        HandlerMethod handlerMethod = findHandlerMethod(uri, deleteMappings, pathVariables);
+        HandlerAdapter handlerAdapter = findHandlerMethod(uri, deleteMappings, pathVariables);
         try {
-            doInvoke(handlerMethod, pathVariables, req, res);
+            doInvoke(handlerAdapter, pathVariables, req, res);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
-    private HandlerMethod findHandlerMethod(String uri, Map<String, HandlerMethod> mappings, Map<String, String> pathVariables) {
+    private HandlerAdapter findHandlerMethod(String uri, Map<String, HandlerAdapter> mappings, Map<String, String> pathVariables) {
         String key = uri;
-        HandlerMethod handlerMethod = mappings.get(key);
-        if(handlerMethod == null) {
+        HandlerAdapter handlerAdapter = mappings.get(key);
+        if(handlerAdapter == null) {
             for (String mapping : mappings.keySet()) {
                 String[] pathParts = mapping.split("/");
                 String[] uriParts = uri.split("/");
@@ -168,15 +168,15 @@ public class DispatcherServlet extends HttpServlet {
                     if(!pathVariablesMethod.isEmpty()) {
                         pathVariables.putAll(pathVariablesMethod);
                     }
-                    handlerMethod = mappings.get(mapping);
+                    handlerAdapter = mappings.get(mapping);
                 }
             }
         }
-        if(handlerMethod == null) {
+        if(handlerAdapter == null) {
             System.out.println("[DispatcherServlet] MisMapping: " + key);
             return null;
         }
         System.out.println("[DispatcherServlet] Mapping: " + key);
-        return handlerMethod;
+        return handlerAdapter;
     }
 }
